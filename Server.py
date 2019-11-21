@@ -2,14 +2,17 @@ import socket
 import sys
 import os
 from Crypto.Cipher import AES
+from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Cipher import PKCS1_OAEP
 
 MAX_FILE_SIZE = 100
 serverPort = 13000
 
 def server():
 
+	#MAX_FILE_SIZE = int(input("What is the max file size?"))
 	try:
 		serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	except socket.error as e:
@@ -26,7 +29,21 @@ def server():
 
 	serverSocket.listen(3)
 
-	clients = ["Client1", "Client2", "Client3"]
+	clients = ["client1", "client2", "client3"]
+
+	#Get the server's private key from a file
+	serPrivFile = open('server_private.pem', 'rb')
+	serPrivKey = serPrivFile.read()
+	serPrivFile.close()
+	serPriv = RSA.import_key(serPrivKey)
+	serCipher = PKCS1_OAEP.new(serPriv)
+
+	#Get the client's public key from a file
+	cliPubFile = open('client1_public.pem', 'rb')
+	cliPubKey = cliPubFile.read()
+	cliPubFile.close()
+	cliPub = RSA.import_key(cliPubKey)
+	cliCipher = PKCS1_OAEP.new(cliPub)
 
 	while 1:
 		#try:
@@ -38,19 +55,20 @@ def server():
 			serverSocket.close()
 			
 			#Receive client name and check if it is valid
-			clientName = connectionSocket.recv(2048)
-			clientName = clientName.decode('ascii')
+			encryptClientName = connectionSocket.recv(2048)
+			clientName = unpad(serCipher.decrypt(encryptClientName), 16).decode('ascii')
 			if clientName in clients:
 				#Generate sym_key (256 AES) and send to client, encrypted with client pubkey
 				sym_key = get_random_bytes(32)
 				cipher = AES.new(sym_key, AES.MODE_ECB)
 				#Send to client, encrypted with client public key
-				connectionSocket.send(sym_key)
+				encryptSymKey = cliCipher.encrypt(pad(sym_key), 16)
+				connectionSocket.send(encryptSymKey)
 				#Print acceptance message
 				print("Connection Accepted and Symmetric Key Generated for client:", clientName)
 			else:
 				invalid = ("Invalid clientName")
-				connectionSocket.send(invalid)
+				connectionSocket.send(invalid.encode('ascii'))
 				print("The received client:", clientName, "is invalid (Connection Terminated).")
 				connectionSocket.close()
 				return

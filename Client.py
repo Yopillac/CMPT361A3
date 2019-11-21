@@ -1,8 +1,10 @@
 import socket
 import sys
 from Crypto.Cipher import AES
+from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Cipher import PKCS1_OAEP
 
 def client():
 
@@ -16,21 +18,37 @@ def client():
 		print("Error in client socket creation:", e)
 		sys.exit(1)
 
+	#Get the server's public key from a file
+	serPubFile = open('server_public.pem', 'rb')
+	serPubKey = serPubFile.read()
+	serPubFile.close()
+	serPub = RSA.import_key(serPubKey)
+	serCipher = PKCS1_OAEP.new(serPub)
+
+	#Get the client's private key from a file
+	cliPrivFile = open('client1_private.pem', 'rb')
+	cliPrivKey = cliPrivFile.read()
+	cliPrivFile.close()
+	cliPriv = RSA.import_key(cliPrivKey)
+	cliCipher = PKCS1_OAEP.new(cliPriv)
+
 	#try:
 	clientSocket.connect((serverName, serverPort))
 
 	#Send client name to server
 	#Need to encrypt it with server's public key
-	encryptClientName = clientName.encode('ascii')
+	encryptClientName = serCipher.encrypt(pad(clientName.encode('ascii'), 16))
 	clientSocket.send(encryptClientName)
 
 	acceptMsg = clientSocket.recv(2048)
-	if (acceptMsg == "Invalid clientName"):
+	#if (acceptMsg.decode('ascii') == "Invalid clientName"):
+	if (acceptMsg.can_decrypt()):
+		sym_key = unpad(serCipher.decrypt(acceptMsg), 16).decode('ascii')
+	else:
 	 	print("Invalid client name.\nTerminating.")
 	 	clientSocket.close()
 	 	return
-
-	sym_key = acceptMsg
+	 	
 	print("Received the symmetric key from the server.")
 	cipher = AES.new(sym_key, AES.MODE_ECB)
 
