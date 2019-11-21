@@ -1,6 +1,9 @@
 import socket
 import sys
 import os
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad, unpad
 
 MAX_FILE_SIZE = 100
 serverPort = 13000
@@ -39,15 +42,15 @@ def server():
 			clientName = clientName.decode('ascii')
 			if clientName in clients:
 				#Generate sym_key (256 AES) and send to client, encrypted with client pubkey
-				sym_key = "Generate Key"
-				encryptSymKey = sym_key.encode('ascii')
-				connectionSocket.send(encryptSymKey)
+				sym_key = get_random_bytes(32)
+				cipher = AES.new(sym_key, AES.MODE_ECB)
+				#Send to client, encrypted with client public key
+				connectionSocket.send(sym_key)
 				#Print acceptance message
 				print("Connection Accepted and Symmetric Key Generated for client:", clientName)
 			else:
-				invalid = "Invalid clientName"
-				encryptInvalid = invalid.encode('ascii')
-				connectionSocket.send(encryptInvalid)
+				invalid = ("Invalid clientName")
+				connectionSocket.send(invalid)
 				print("The received client:", clientName, "is invalid (Connection Terminated).")
 				connectionSocket.close()
 				return
@@ -55,31 +58,31 @@ def server():
 			#Encrypt all future messages with client with sym_key
 
 			fileMsg = "Enter filename: "
-			encryptFileMsg = fileMsg.encode('ascii')
+			encryptFileMsg = cipher.encrypt(pad(fileMsg.encode('ascii'), 16))
 			connectionSocket.send(encryptFileMsg)
 			print("Server is now processing client", clientName, "request.")
 
 			encryptFilename = connectionSocket.recv(2048)
-			filename = encryptFilename.decode('ascii')
+			filename = unpad(cipher.decrypt(encryptFilename), 16).decode('ascii')
 			print("The server received the file name", filename, "from client:", clientName)
 
 			rqstSize = "Server Requested file size"
-			encryptRqstSize = rqstSize.encode('ascii')
+			encryptRqstSize = cipher.encrypt(pad(rqstSize.encode('ascii'), 16))
 			connectionSocket.send(encryptRqstSize)
 
 			encryptFileSize = connectionSocket.recv(2048)
-			fileSize = encryptFileSize.decode('ascii')
+			fileSize = unpad(cipher.decrypt(encryptFileSize), 16).decode('ascii')
 			fileSize = int(fileSize)
 			if (fileSize > MAX_FILE_SIZE):
 				status = "No"
-				encryptStatus = status.encode('ascii')
+				encryptStatus = cipher.encrypt(pad(status.encode('ascii'), 16))
 				connectionSocket.send(encryptStatus)
 				print("File size exceeds the threshold. Terminating Connection with", clientName)
 				connectionSocket.close()
 				return
 
 			status = "OK"
-			encryptStatus = status.encode('ascii')
+			encryptStatus = cipher.encrypt(pad(status.encode('ascii'), 16))
 			connectionSocket.send(encryptStatus)
 			print("Uploading data from:", clientName)
 
