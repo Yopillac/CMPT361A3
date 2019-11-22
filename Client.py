@@ -26,7 +26,7 @@ def client():
 	serCipher = PKCS1_OAEP.new(serPub)
 
 	#Get the client's private key from a file
-	cliPrivFile = open('client1_private.pem', 'rb')
+	cliPrivFile = open(clientName + '_private.pem', 'rb')
 	cliPrivKey = cliPrivFile.read()
 	cliPrivFile.close()
 	cliPriv = RSA.import_key(cliPrivKey)
@@ -42,13 +42,13 @@ def client():
 
 	acceptMsg = clientSocket.recv(2048)
 	#if (acceptMsg.decode('ascii') == "Invalid clientName"):
-	if (acceptMsg.can_decrypt()):
-		sym_key = unpad(serCipher.decrypt(acceptMsg), 16).decode('ascii')
-	else:
+	if (acceptMsg == ("Invalid clientName").encode('ascii')):
 	 	print("Invalid client name.\nTerminating.")
 	 	clientSocket.close()
 	 	return
-	 	
+	else:
+	 	sym_key = unpad(cliCipher.decrypt(acceptMsg), 16)
+
 	print("Received the symmetric key from the server.")
 	cipher = AES.new(sym_key, AES.MODE_ECB)
 

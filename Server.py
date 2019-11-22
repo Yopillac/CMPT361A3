@@ -38,13 +38,6 @@ def server():
 	serPriv = RSA.import_key(serPrivKey)
 	serCipher = PKCS1_OAEP.new(serPriv)
 
-	#Get the client's public key from a file
-	cliPubFile = open('client1_public.pem', 'rb')
-	cliPubKey = cliPubFile.read()
-	cliPubFile.close()
-	cliPub = RSA.import_key(cliPubKey)
-	cliCipher = PKCS1_OAEP.new(cliPub)
-
 	while 1:
 		#try:
 		connectionSocket, addr = serverSocket.accept()
@@ -58,11 +51,19 @@ def server():
 			encryptClientName = connectionSocket.recv(2048)
 			clientName = unpad(serCipher.decrypt(encryptClientName), 16).decode('ascii')
 			if clientName in clients:
+
+				#Get the client's public key from a file
+				cliPubFile = open(clientName + '_public.pem', 'rb')
+				cliPubKey = cliPubFile.read()
+				cliPubFile.close()
+				cliPub = RSA.import_key(cliPubKey)
+				cliCipher = PKCS1_OAEP.new(cliPub)
+
 				#Generate sym_key (256 AES) and send to client, encrypted with client pubkey
 				sym_key = get_random_bytes(32)
 				cipher = AES.new(sym_key, AES.MODE_ECB)
 				#Send to client, encrypted with client public key
-				encryptSymKey = cliCipher.encrypt(pad(sym_key), 16)
+				encryptSymKey = cliCipher.encrypt(pad(sym_key, 16))
 				connectionSocket.send(encryptSymKey)
 				#Print acceptance message
 				print("Connection Accepted and Symmetric Key Generated for client:", clientName)
