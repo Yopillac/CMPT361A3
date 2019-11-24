@@ -106,7 +106,16 @@ def server():
 			print("Uploading data from:", clientName)
 
 			#Receive file from client, write it to proper directory
-			print("Upload complete for:", clientName, "Terminating connection")
+			receiveBytes = (fileSize + (16 - (fileSize%16)))
+			encryptData = connectionSocket.recv(receiveBytes)
+			data = unpad(cipher.decrypt(encryptData), 16).decode('ascii')
+
+			path = (clientName + "/" + filename)
+			file = open(path, "w")
+			file.write(data)
+			file.close()
+
+			print("Upload complete for:", clientName, "\nTerminating connection")
 
 			connectionSocket.close()
 			return

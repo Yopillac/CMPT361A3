@@ -64,8 +64,13 @@ def client():
 	encryptRqstSize = clientSocket.recv(2048)
 	rqstSize = unpad(cipher.decrypt(encryptRqstSize), 16).decode('ascii')
 	print(rqstSize)
+
 	#Count number of characters in file and record it in count
-	count = str(1)
+	file = open(filename)
+	data = file.read()
+	file.close()
+	count = str(len(data))
+	print(count)
 	encryptCount = cipher.encrypt(pad(count.encode('ascii'), 16))
 	clientSocket.send(encryptCount)
 
@@ -77,6 +82,8 @@ def client():
 		return
 
 	#Encrypt file and send to server
+	encryptFile = cipher.encrypt(pad(data.encode('ascii'), 16))
+	clientSocket.send(encryptFile)
 	print("The file size is OK.\nSending the file contents to the server.\nThe file is saved.")
 
 	clientSocket.close()
