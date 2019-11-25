@@ -25,13 +25,6 @@ def client():
 	serPub = RSA.import_key(serPubKey)
 	serCipher = PKCS1_OAEP.new(serPub)
 
-	#Get the client's private key from a file
-	cliPrivFile = open(clientName + '_private.pem', 'rb')
-	cliPrivKey = cliPrivFile.read()
-	cliPrivFile.close()
-	cliPriv = RSA.import_key(cliPrivKey)
-	cliCipher = PKCS1_OAEP.new(cliPriv)
-
 	#try:
 	clientSocket.connect((serverName, serverPort))
 
@@ -47,7 +40,13 @@ def client():
 	 	clientSocket.close()
 	 	return
 	else:
-	 	sym_key = unpad(cliCipher.decrypt(acceptMsg), 16)
+		#Get the client's private key from a file
+		cliPrivFile = open(clientName + '_private.pem', 'rb')
+		cliPrivKey = cliPrivFile.read()
+		cliPrivFile.close()
+		cliPriv = RSA.import_key(cliPrivKey)
+		cliCipher = PKCS1_OAEP.new(cliPriv)
+		sym_key = unpad(cliCipher.decrypt(acceptMsg), 16)
 
 	print("Received the symmetric key from the server.")
 	cipher = AES.new(sym_key, AES.MODE_ECB)
