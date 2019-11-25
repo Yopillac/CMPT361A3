@@ -1,5 +1,6 @@
 import socket
 import sys
+import random
 from Crypto.Cipher import AES
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
@@ -81,6 +82,7 @@ def client():
 		return
 
 	#Encrypt file and send to server
+	#Need to send 1 chunk at a time, server sends ack when message is received.
 	encryptFile = cipher.encrypt(pad(data.encode('ascii'), 16))
 	clientSocket.send(encryptFile)
 	print("The file size is OK.\nSending the file contents to the server.\nThe file is saved.")
