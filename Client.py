@@ -83,8 +83,17 @@ def client():
 
 	#Encrypt file and send to server
 	#Need to send 1 chunk at a time, server sends ack when message is received.
-	encryptFile = cipher.encrypt(pad(data.encode('ascii'), 16))
-	clientSocket.send(encryptFile)
+	file = open(filename)
+	data = file.read(1000)
+	while (data):
+		encryptData = cipher.encrypt(pad(data.encode('ascii'), 16))
+		clientSocket.send(encryptData)
+
+		encryptAck = clientSocket.recv(128)
+		ack = unpad(cipher.decrypt(encryptAck), 16).decode('ascii')
+
+		data = file.read(1000)
+	file.close()
 	print("The file size is OK.\nSending the file contents to the server.\nThe file is saved.")
 
 	clientSocket.close()

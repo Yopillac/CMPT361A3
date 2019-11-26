@@ -8,7 +8,7 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Cipher import PKCS1_OAEP
 
-MAX_FILE_SIZE = 100
+MAX_FILE_SIZE = 90000
 serverPort = 13000
 
 def server():
@@ -106,14 +106,21 @@ def server():
 			connectionSocket.send(encryptStatus)
 			print("Uploading data from:", clientName)
 
-			#Receive file from client, write it to proper directory
-			receiveBytes = (fileSize + (16 - (fileSize%16)))
-			encryptData = connectionSocket.recv(receiveBytes)
-			data = unpad(cipher.decrypt(encryptData), 16).decode('ascii')
-
 			path = (clientName + "/" + filename)
 			file = open(path, "w")
-			file.write(data)
+			#Receive file from client, write it to proper directory
+			#receiveBytes = (fileSize + (16 - (fileSize%16)))
+			ack=0
+			encryptData = connectionSocket.recv(1024)
+			while(encryptData):
+				data = unpad(cipher.decrypt(encryptData), 16).decode('ascii')
+				file.write(data)
+
+				ack=ack+1
+				encryptAck = cipher.encrypt(pad(str(ack).encode('ascii'), 16))
+				connectionSocket.send(encryptAck)
+
+				encryptData = connectionSocket.recv(1024)
 			file.close()
 
 			print("Upload complete for:", clientName, "\nTerminating connection")
