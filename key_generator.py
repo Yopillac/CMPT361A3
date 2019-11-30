@@ -1,3 +1,7 @@
+#CMPT361 Assignment 3
+#key_generator.py
+#Ryan Dykstra, Dale Albert, Adrian Cate
+
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
